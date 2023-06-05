@@ -5,13 +5,11 @@ import { Repository,Like } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import {User} from './entities/user.entity'
 import {UserLabel} from './entities/userLabel.tntity'
-import { Permission } from 'src/permission/entities/permission.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly user:Repository<User>,
-    @InjectRepository(Permission) private readonly permission:Repository<Permission>,
     @InjectRepository(UserLabel) private readonly userLabel:Repository<UserLabel>
 
   ){}
@@ -40,7 +38,7 @@ export class UserService {
     if(!res){
       return {message:'无数据'}
     }
-    let result = await this.permission.find({where:{role:res.role}})
+    // let result = await this.permission.find({where:{role:res.role}})
     //console.log(result,'===');
     let {password,...data} = res;
     return data;

@@ -5,10 +5,8 @@ import { UserModule } from './user/user.module';
 import {TypeOrmModule} from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserController } from './user/user.controller';
-import { PermissionModule } from './permission/permission.module';
 import { UploadModule } from './upload/upload.module';
 import { ConfigModule } from '@nestjs/config'
-import { InvitationModule } from './invitation/invitation.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ScheduleService } from './modules/schedule/schedule.service';
 
@@ -39,9 +37,7 @@ if(process.env.RUNNING_ENV=='dev'){
       retryAttempts:10,
       autoLoadEntities:true
     }),
-    PermissionModule,
     UploadModule,
-    InvitationModule,
     ScheduleModule.forRoot()
   ],
   controllers: [AppController,UserController],
