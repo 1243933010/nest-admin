@@ -6,10 +6,10 @@ import {TypeOrmModule} from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserController } from './user/user.controller';
 import { UploadModule } from './upload/upload.module';
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule,ConfigService } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule';
 import { ScheduleService } from './modules/schedule/schedule.service';
-
+import { LoopTaskModule } from './loop-task/loop-task.module';
 
 let envFilePath = ['.env'];
 if(process.env.RUNNING_ENV=='dev'){
@@ -38,7 +38,8 @@ if(process.env.RUNNING_ENV=='dev'){
       autoLoadEntities:true
     }),
     UploadModule,
-    ScheduleModule.forRoot()
+    ScheduleModule.forRoot(),
+    LoopTaskModule
   ],
   controllers: [AppController,UserController],
   providers: [AppService,  ScheduleService],
