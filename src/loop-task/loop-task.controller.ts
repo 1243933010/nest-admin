@@ -12,6 +12,11 @@ export class LoopTaskController {
     return this.loopTaskService.create(createLoopTaskDto);
   }
 
+  @Post('find')
+  findOrder() {
+    return this.loopTaskService.findOrder();
+  }
+
   @Get()
   findAll() {
     return this.loopTaskService.findAll();

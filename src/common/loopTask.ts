@@ -2,37 +2,12 @@
 import axios, { } from 'axios';
 import { WinstonClass } from '../common/winston';
 import { Readable } from 'stream';
-// import { HttpException, HttpStatus,Injectable } from '@nestjs/common';
 import * as FormData from 'form-data';
 
 import { createWriteStream, createReadStream } from 'fs';
 import { resolve } from 'path';
 
-/**
- * https://shop.zyjsl.com/adminapi/file/upload
- * 
- * /uploads/attach/2023/06/20230606/daccad07d08b7f6409442629ae602b1b.jpg 上传图片成功后返回地址
- * 
- * pid: 0
- * file: (binary)
- */
 
-/**
- * 
-https://shop.zyjsl.com/adminapi/product/reply/save_fictitious_reply.html
-
-add_time: "2023-05-26 18:21:38"
-avatar: "https://shop.zyjsl.com/uploads/attach/2023/05/20230530/f4dc7c45c3907ea24e5c72aa488ae7de.jpg"
-comment: "榴莲品相很好"
-image: {
-    image: "https://shop.zyjsl.com/uploads/attach/2023/05/20230524/3689fbaa50e88034173c28a2e3d9c6b2.jpg"
-    product_id: 16
-}
-nickname: "微信用户"
-pics: ["https://shop.zyjsl.com/uploads/attach/2023/06/20230606/daccad07d08b7f6409442629ae602b1b.jpg"]
-product_score: 5
-service_score: 5
- */
 
 
 type thirdPartyTypes = {
@@ -41,18 +16,22 @@ type thirdPartyTypes = {
 
 type filterDataTypes = {
     productColor: string,
-    images: { imgUrl: string }[]
+    images: { imgUrl: string }[],
+    score:number
 }
 
 type uploadTypes = {
     data: { src: string },
-    status: number
+    status: number,
+    score:number
 }
 
+let pageSize = 20;//拉取分页起始页数
 const packageOptions = {  //具体配置对象数据
-    pageSize:'20',//拉取分页起始页数
-    thirdPartyUrl:`https://api.m.jd.com/?appid=item-v3&functionId=pc_club_productPageComments&client=pc&clientVersion=1.0.0&t=1685958279872&loginType=3&uuid=122270672.1668498897411235926214.1668498897.1685932035.1685958234.17&productId=57098316754&score=0&sortType=5&page=${this.pageSize}&pageSize=10&isShadowSku=0&rid=0&fold=1&bbtf=&shield=`,//拉取目标地址
-    strReg:'3.6斤-4.2斤',//筛选条件
+    get thirdPartyUrl(){
+        return `https://api.m.jd.com/?appid=item-v3&functionId=pc_club_productPageComments&client=pc&clientVersion=1.0.0&t=1686205768371&loginType=3&uuid=122270672.1668498897411235926214.1668498897.1686193203.1686205632.22&productId=28937255040&score=0&sortType=5&page=${pageSize}&pageSize=10&isShadowSku=0&rid=0&fold=1&bbtf=&shield=`
+    },
+    strReg:'',//筛选条件
     index:0,//获取当前分页的数据的索引位置，默认第一条符合条件数据
     imgStr:'n0/s128x96_jfs',//图片链接需要被替换的字符串
     imgStrReg:"shaidan/s616x405_jfs",//图片链接替换的字符串
@@ -89,7 +68,6 @@ export const thirdParty = (options: thirdPartyTypes) => {  //拉取京东分页�
                 'Content-Type': 'application/json;charset=gbk', // 指定 GBK 编码格式
             },
         }).then((res) => {
-
             const decoder = new TextDecoder('gbk') // 使用 GBK 编码构造 TextDecoder
             const data = decoder.decode(res.data) // 解码响应数据
             // console.log(data)
@@ -102,9 +80,9 @@ export const thirdParty = (options: thirdPartyTypes) => {  //拉取京东分页�
 
 
 export const comment = () => {  //调用自身接口，定时任务触发
-    packageOptions.pageSize = packageOptions.pageSize + 2;
-    console.log('当前页面size', packageOptions.pageSize)
-    axios.post('http://localhost:3003/loopTask', { pageSize: packageOptions.pageSize }).then((res) => {
+    pageSize = pageSize + 1;
+    console.log('当前页面size', pageSize)
+    axios.post('http://localhost:3003/loopTask', { pageSize: pageSize }).then((res) => {
         // console.log(res);
     })
 }
@@ -113,16 +91,19 @@ export const comment = () => {  //调用自身接口，定时任务触发
 
 export const filterData = async (arr: filterDataTypes[]) => {  //筛选数据，整合数据
     let logger = WinstonClass();
-    const strReg: string = packageOptions.strReg;   //暂时筛选条件设定
+    // const strReg: string = packageOptions.strReg;   //暂时筛选条件设定
     let options: filterDataTypes;
-    arr.forEach(val => {
-        if (val.productColor.includes(strReg)) {
-            options = val;
+    for(let i = 0;i<arr.length;i++){
+        if (arr[i].productColor.includes( packageOptions.strReg)&&arr[i].score===5) { //暂时筛选条件设定
+            options = arr[i];
+            break;
         }
-    })
+    }
+
     if (options) {
         // logger.info('response', options);
-        if (options.images.length > 0) {
+        console.log(options)
+        if (options?.images?.length > 0) {
             let imgUrl = options.images[0].imgUrl.replace(packageOptions.imgStr,packageOptions.imgStrReg)
             let files = await pushImage(`https:${imgUrl}`, options);
             console.log(`https:${imgUrl}`, '===========', options.images[0].imgUrl.indexOf(packageOptions.imgStr))
@@ -131,7 +112,8 @@ export const filterData = async (arr: filterDataTypes[]) => {  //筛选数据，
         }
 
     } else {
-        packageOptions.pageSize = packageOptions.pageSize + 1;
+        
+        comment();
     }
 
 }
@@ -154,17 +136,16 @@ async function downloadImage(url: string, filename: string): Promise<string> {  
 }
 
 export const pushImage = async (url: string, options: object) => {  //把评论图片下载下来同时传到项目里面去，返回图片路径
-    let AuthoriZation = packageOptions.AuthoriZation;
     if (url) {
         let name = new Date().getTime();
         let data = await downloadImage(url, `${name}.png`);
-        let result: uploadTypes = await uploadImage(data, packageOptions.uploadUrl, AuthoriZation);
+        let result: uploadTypes = await uploadImage(data, packageOptions.uploadUrl, packageOptions.AuthoriZation);
         if (result.status === 200) {
-            let res = await pushTask(result.data.src, options, AuthoriZation);
+            let res = await pushTask(result.data.src, options, packageOptions.AuthoriZation);
             // console.log(res);
         }
     } else {
-        await pushTask('', options, AuthoriZation);
+        await pushTask('', options, packageOptions.AuthoriZation);
     }
 
 }
@@ -189,30 +170,17 @@ async function uploadImage(filePath: string, url: string, token: string): Promis
 
 const pushTask = async (url: string, options: any, AuthoriZation: string) => {  //把合适的数据添加到项目里面去
     let logger = WinstonClass();
-    let host = packageOptions.host;
-    // let formdata = {
-    //     add_time: getRandDateThisMonth(),
-    //     avatar: 'https://shop.zyjsl.com/uploads/attach/2023/05/20230530/f4dc7c45c3907ea24e5c72aa488ae7de.jpg',
-    //     comment: options.content,
-    //     image: {
-    //         image: "https://shop.zyjsl.com/uploads/attach/2023/05/20230524/3689fbaa50e88034173c28a2e3d9c6b2.jpg",
-    //         product_id: 16
-    //     },
-    //     nickname: "微信用户",
-    //     pics: url?[`${host}${url}`]:[],
-    //     product_score: 5,
-    //     service_score: 5
-
-    // }
-    let formdata = packageOptions.formdata;
-    console.log(formdata,'===')
-    let res = await axios.post(packageOptions.saveFictitiousReply, formdata, {
+    packageOptions.formdata.add_time = getRandDateThisMonth();
+    packageOptions.formdata.comment = options.content.replace(packageOptions.replaceStr,'');
+    packageOptions.formdata.pics = url?[`${packageOptions.host}${url}`]:[]
+    console.log( packageOptions.formdata,'===')
+    let res = await axios.post(packageOptions.saveFictitiousReply,  packageOptions.formdata, {
         headers: {
             'Authori-Zation': `Bearer ${AuthoriZation}`,
         },
     })
     // console.log(res);
-    logger.info('formdata', formdata);
+    logger.info('formdata', packageOptions.formdata);
 }
 
 

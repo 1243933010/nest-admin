@@ -14,9 +14,10 @@ export class LoopTaskService {
      filterData(data.comments);
     // console.log(createLoopTaskDto,'----',data.comments)
     return {code:200,message:'success'}
-    // return 'This action adds a new loopTask';
   }
-
+  findOrder(){
+    return {code:200,message:'success'}
+  }
   findAll() {
     return `This action returns all loopTask`;
   }
